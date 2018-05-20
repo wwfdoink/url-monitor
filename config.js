@@ -1,30 +1,3 @@
-# url-monitor
-
-Monitor urls using headless chromium and compare the result using GraphicsMagick.
-Output is using Nagios format.
-
-### Installation
-
-Install GraphicsMagick:
-http://www.graphicsmagick.org/download.html
-
-Install nodejs dependencies:
-```sh
-$ npm install
-```
-
-### Run
-```sh
-$ node app.js 
-```
-# Running options
-```sh node app.js
-    --config="./config.js" # run with different config file
-    --ref # force to create new reference images
-```
-
-### Configuration (config.js)
-```js
 // ============
 // config.js
 // ============
@@ -43,6 +16,8 @@ module.exports = {
     // nagios thresholds based on image compare result
     criticalThreshold: 0.002,
     warningThreshold: 0.001,
+	// keep files for (days)
+	imageLogTimeout: 1,
     // Path to save all the images
     historyPath: "./history",
     // URLs to process
@@ -52,5 +27,3 @@ module.exports = {
         "file:///D:/5/3.html",
     ],
 };
-
-```

@@ -1,0 +1,21 @@
+{
+  "name": "url_monitor",
+  "version": "0.0.1",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "gm": "^1.23.1",
+    "lowdb": "^1.0.0",
+    "minimist": "^1.2.0",
+    "moment": "^2.22.1",
+    "nagios-plugin": "^0.1.2",
+    "promise-pool-executor": "^1.1.1",
+    "puppeteer": "^1.4.0",
+    "string-similarity": "^1.2.0"
+  }
+}
