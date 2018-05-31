@@ -9,6 +9,9 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
+    "colors": "^1.3.0",
+    "diff": "^3.5.0",
+    "fs-extra": "^6.0.1",
     "gm": "^1.23.1",
     "lowdb": "^1.0.0",
     "minimist": "^1.2.0",

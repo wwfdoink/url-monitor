@@ -14,11 +14,11 @@ module.exports = {
         },
     },
     // nagios thresholds based on image compare result
-    criticalThreshold: 0.002,
-    warningThreshold: 0.001,
+    criticalThreshold: 0.001,
+    warningThreshold: 0.0005,
 	// keep files for (days)
 	imageLogTimeout: 1,
-    // Path to save all the images
+    // Path to save all the files
     historyPath: "./history",
     // URLs to process
     urls: [

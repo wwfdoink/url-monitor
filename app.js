@@ -2,14 +2,15 @@ const puppeteer = require('puppeteer');
 const argv = require('minimist')(process.argv.slice(2));
 const gm = require('gm');
 const low = require('lowdb');
-const fs = require('fs');
+const fs = require('fs-extra');
 const NagiosPlugin = require('nagios-plugin');
 const FileSync = require('lowdb/adapters/FileSync');
 const adapter = new FileSync('db.json');
 const db = low(adapter);
 const PromisePool = require('promise-pool-executor');
 const moment = require('moment');
-
+const JsDiff = require('diff');
+const colors = require('colors');
 
 
 const configFile = (argv.config) ? argv.config : './config.js';
@@ -32,6 +33,10 @@ nagios.setThresholds({
 });
 // Create new references images/htmls
 const forceReference = (argv.ref) ? true : false;
+if (forceReference) {
+    db.set("reference", {}).write();
+    db.set("history", []).write();
+}
 
 const now = moment();
 const fullDate = {
@@ -44,7 +49,7 @@ function compareImage(image1Path, image2Path, imageDiffPath) {
     return new Promise((resolve, reject) => {
         var options = {
             highlightStyle: 'Assign',
-            highlightColor: '#ff00ff',
+            "highlight-color": '#ff00ff',
             tolerance: 0,
             file: imageDiffPath,
         };
@@ -93,24 +98,18 @@ function getNagiosStatus(url, diff) {
 }
 
 function makeDirsSync(urlList) {
-    // Parent dir: ./history
-    if (!fs.existsSync(config.historyPath)) {
-        fs.mkdirSync(config.historyPath);
-    }
     // Reference dir: ./history/refs
     if (!fs.existsSync(config.historyPath + "/refs")) {
-        fs.mkdirSync(config.historyPath + "/refs");
+        fs.mkdirsSync(config.historyPath + "/refs");
     }
     // Parent dir: ./history/<date>
     const datePath = config.historyPath + '/' + fullDate.date;
-    if (!fs.existsSync(datePath)) {
-        fs.mkdirSync(datePath);
-    }
+
     // URL dir: ./history/<date>/<url>
     for (let i = 0; i < urlList.length; i++) {
         const urlPath = config.historyPath + '/' + fullDate.date + '/' + urlToFilename(urlList[i]);
         if (!fs.existsSync(urlPath)) {
-            fs.mkdirSync(urlPath);
+            fs.mkdirsSync(urlPath);
         }
     }
 }
@@ -148,18 +147,19 @@ function maintainOldFiles() {
         }
     }
 }
+/*
+function getResourceUrls(result){
+    return result.traceEvents.filter((item) => {
+        if (item.name == "ResourceSendRequest") {
+            return true;
+        }
+        return false;
+    });
+}*/
 
 async function handleUrl(browser, url) {
     return new Promise(async (resolve, reject) => {
         try {
-            const page = await browser.newPage();
-            await page.setViewport({
-                width: config.browser.viewport.width,
-                height: config.browser.viewport.height
-            })
-            const response = await page.goto(url);
-            const htmlText = await response.text();
-			
             const referenceImage = db.get("reference").value()[url];
 			let basePath;
 			let deepPath;
@@ -169,7 +169,29 @@ async function handleUrl(browser, url) {
 			} else {
 				basePath = config.historyPath + '/' + fullDate.date + '/' + urlToFilename(url);
 				deepPath = basePath + '/' + fullDate.fileTime;				
-			}
+            }
+            
+            // Browser new tab
+            const page = await browser.newPage();
+
+            const responseList = [];
+            page.on('response', (res) => {
+                responseList.push({
+                    url: res.url(),
+                });
+            });
+            
+            await page.setViewport({
+                width: config.browser.viewport.width,
+                height: config.browser.viewport.height
+            });
+            //await page.tracing.start({ path: deepPath + '.json' });
+            const response = await page.goto(url);
+            //await page.tracing.stop();
+
+            console.log(responseList);
+
+            const htmlText = await response.text();
 
             const historyData = {
                 date: fullDate.date,
@@ -179,6 +201,7 @@ async function handleUrl(browser, url) {
                 imageDiffPath: deepPath + '_DIFF.png',
                 imageDiff: 0,
                 htmlPath: deepPath + '.html',
+                htmlDiffPath: deepPath + '.html.diff',
                 htmlDiff: 0,
             }
 
@@ -189,12 +212,32 @@ async function handleUrl(browser, url) {
                 fullPage: config.browser.fullPageCapture
             });
 
-            // Diff with the latest screenshot
-			if(forceReference || !referenceImage) {
+			if (forceReference || !referenceImage) {
                 historyData.imageDiffPath = null;
                 historyData.imageDiff = 0;
+                historyData.htmlDiffPath = null;
             } else {
+                /*
+                const resources = getResourceUrls(JSON.parse(fs.readFileSync(deepPath + '.json', 'utf-8')));
+                resources.forEach((resource) => {
+                    console.log(resource.args.data.url);
+                });*/
+
                 historyData.imageDiff = await compareImage(referenceImage.imagePath, historyData.imagePath, historyData.imageDiffPath);
+
+                const referenceHtmlText = fs.readFileSync(referenceImage.htmlPath, 'utf8');
+                const htmlDiffs = JsDiff.diffChars(referenceHtmlText, htmlText, {
+                    ignoreWhitespace: true
+                });
+                historyData.htmlDiff = htmlDiffs.length;
+
+                // create html diff file
+                if (htmlDiffs.length > 0) {
+                    htmlDiffs.forEach((part) => {
+                        var color = part.added ? 'green' : part.removed ? 'red' : 'grey';
+                        fs.appendFileSync(historyData.htmlDiffPath, part.value[color]);
+                    });
+                }
             }
 
             // cleanup if status is OK
@@ -224,9 +267,9 @@ async function handleUrl(browser, url) {
             }
 
             await page.close();
-            resolve({ status: nagiosStatus.status, message: nagiosStatus.message })
+            resolve({ status: nagiosStatus.status, message: nagiosStatus.message });
         } catch (e) {
-            resolve({ status: nagios.states.WARNING, message: e })
+            resolve({ status: nagios.states.WARNING, message: e });
         }
     });
 }
