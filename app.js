@@ -229,7 +229,6 @@ async function handleUrl(browser, url) {
 
                 const referenceHtmlText = fs.readFileSync(referenceImage.htmlPath, 'utf8');
                 let htmlDiffContents;
-
                 if (htmlText.length < 100000) {
                     htmlDiffContents = JsDiff.diffLines(referenceHtmlText, htmlText, {
                         ignoreWhitespace: true,
@@ -290,7 +289,7 @@ async function handleUrl(browser, url) {
     maintainOldFiles();
 
     const browser = await puppeteer.launch({
-        ignoreHTTPSErrors: config.ignoreHTTPSErrors,
+        ignoreHTTPSErrors: config.browser.ignoreHTTPSErrors,
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 

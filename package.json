@@ -17,6 +17,7 @@
     "minimist": "^1.2.0",
     "moment": "^2.22.1",
     "nagios-plugin": "^0.1.2",
+    "pretty": "^2.0.0",
     "promise-pool-executor": "^1.1.1",
     "puppeteer": "^1.4.0",
     "string-similarity": "^1.2.0"
