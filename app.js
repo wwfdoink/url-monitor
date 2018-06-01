@@ -48,7 +48,7 @@ const fullDate = {
 function compareImage(image1Path, image2Path, imageDiffPath) {
     return new Promise((resolve, reject) => {
         var options = {
-            highlightStyle: 'Assign',
+            "highlight-style": 'Assign',
             "highlight-color": '#ff00ff',
             tolerance: 0,
             file: imageDiffPath,
@@ -174,12 +174,14 @@ async function handleUrl(browser, url) {
             // Browser new tab
             const page = await browser.newPage();
 
+            /*
             const responseList = [];
+
             page.on('response', (res) => {
                 responseList.push({
                     url: res.url(),
                 });
-            });
+            });*/
             
             await page.setViewport({
                 width: config.browser.viewport.width,
@@ -189,7 +191,7 @@ async function handleUrl(browser, url) {
             const response = await page.goto(url);
             //await page.tracing.stop();
 
-            console.log(responseList);
+            //console.log(responseList);
 
             const htmlText = await response.text();
 
@@ -226,14 +228,14 @@ async function handleUrl(browser, url) {
                 historyData.imageDiff = await compareImage(referenceImage.imagePath, historyData.imagePath, historyData.imageDiffPath);
 
                 const referenceHtmlText = fs.readFileSync(referenceImage.htmlPath, 'utf8');
-                const htmlDiffs = JsDiff.diffChars(referenceHtmlText, htmlText, {
+                const htmlDiffContents = JsDiff.diffChars(referenceHtmlText, htmlText, {
                     ignoreWhitespace: true
                 });
-                historyData.htmlDiff = htmlDiffs.length;
+                historyData.htmlDiff = (htmlDiffContents.length - 1);
 
-                // create html diff file
-                if (htmlDiffs.length > 0) {
-                    htmlDiffs.forEach((part) => {
+                // create html diff file, 1 means no changes detected
+                if (htmlDiffContents.length > 1) {
+                    htmlDiffContents.forEach((part) => {
                         var color = part.added ? 'green' : part.removed ? 'red' : 'grey';
                         fs.appendFileSync(historyData.htmlDiffPath, part.value[color]);
                     });
