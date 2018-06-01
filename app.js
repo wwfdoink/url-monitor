@@ -11,7 +11,7 @@ const PromisePool = require('promise-pool-executor');
 const moment = require('moment');
 const JsDiff = require('diff');
 const colors = require('colors');
-
+const pretty = require('pretty');
 
 const configFile = (argv.config) ? argv.config : './config.js';
 if (!fs.existsSync(configFile)) {
@@ -48,7 +48,7 @@ const fullDate = {
 function compareImage(image1Path, image2Path, imageDiffPath) {
     return new Promise((resolve, reject) => {
         var options = {
-            "highlight-style": 'Assign',
+            "highlightStyle": 'Assign',
             "highlight-color": '#ff00ff',
             tolerance: 0,
             file: imageDiffPath,
@@ -193,7 +193,7 @@ async function handleUrl(browser, url) {
 
             //console.log(responseList);
 
-            const htmlText = await response.text();
+            const htmlText = pretty(await response.text());
 
             const historyData = {
                 date: fullDate.date,
@@ -228,17 +228,26 @@ async function handleUrl(browser, url) {
                 historyData.imageDiff = await compareImage(referenceImage.imagePath, historyData.imagePath, historyData.imageDiffPath);
 
                 const referenceHtmlText = fs.readFileSync(referenceImage.htmlPath, 'utf8');
-                const htmlDiffContents = JsDiff.diffChars(referenceHtmlText, htmlText, {
-                    ignoreWhitespace: true
-                });
+                let htmlDiffContents;
+
+                if (htmlText.length < 100000) {
+                    htmlDiffContents = JsDiff.diffLines(referenceHtmlText, htmlText, {
+                        ignoreWhitespace: true,
+                        newlineIsToken: true,
+                    });
+                } else {
+                    htmlDiffContents = [];
+                }
                 historyData.htmlDiff = (htmlDiffContents.length - 1);
 
                 // create html diff file, 1 means no changes detected
                 if (htmlDiffContents.length > 1) {
+                    diffResult = "";
                     htmlDiffContents.forEach((part) => {
                         var color = part.added ? 'green' : part.removed ? 'red' : 'grey';
-                        fs.appendFileSync(historyData.htmlDiffPath, part.value[color]);
+                        diffResult += part.value[color];
                     });
+                    fs.writeFileSync(historyData.htmlDiffPath, pretty(diffResult));
                 }
             }
 
@@ -280,7 +289,10 @@ async function handleUrl(browser, url) {
 (async () => {
     maintainOldFiles();
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        ignoreHTTPSErrors: config.ignoreHTTPSErrors,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
     const urlList = config.urls;
     makeDirsSync(urlList);

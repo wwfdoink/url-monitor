@@ -12,12 +12,13 @@ module.exports = {
             width: 1366,
             height: 768
         },
+        ignoreHTTPSErrors: true,
     },
     // nagios thresholds based on image compare result
     criticalThreshold: 0.001,
     warningThreshold: 0.0005,
 	// keep files for (days)
-	imageLogTimeout: 1,
+    imageLogTimeout: 1,
     // Path to save all the files
     historyPath: "./history",
     // URLs to process
